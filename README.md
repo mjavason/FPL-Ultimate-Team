@@ -2,6 +2,8 @@
 
 A TypeScript Express API that fetches data from the Fantasy Premier League (FPL) API to build an ultimate team based on player performance statistics. The application analyzes player performances across all game weeks and creates an optimal team formation with the best performing players in each position.
 
+<img width="1920" height="1160" alt="Swagger UI - Google Chrome 10_28_2025 12_32_25 AM" src="https://github.com/user-attachments/assets/e4095277-839d-4435-92a4-244359f8f5ab" />
+
 ## Features
 
 - **Data Pipeline**: Automatically fetches and processes FPL player and performance data
