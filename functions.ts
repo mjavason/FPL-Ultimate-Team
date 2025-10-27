@@ -1,0 +1,157 @@
+import axios from 'axios';
+import { fplApi } from './constants';
+import Player from './src/models/Player';
+import PlayerScore from './src/models/PlayerScore';
+import { FPLDatabase } from './types/db.type';
+import { GameWeekData } from './types/gameweek.type';
+const fs = require('fs');
+const path = require('path');
+
+// Clear database and run data update pipeline if this value is changed
+const goodPerformanceThreshold = 5;
+
+export async function pingSelf(url: string) {
+  try {
+    const { data } = await axios.get(url);
+    console.log(`Server pinged successfully: ${data.message}`);
+    return true;
+  } catch (e: any) {
+    console.error(`Error pinging server: ${e.message}`);
+    return false;
+  }
+}
+
+export async function fetchFPLData() {
+  const dbPath = path.join(__dirname, 'db.json');
+  if (fs.existsSync(dbPath)) {
+    const fileData = fs.readFileSync(dbPath, 'utf8');
+    return JSON.parse(fileData) as FPLDatabase;
+  }
+
+  try {
+    const data = await fplApi.get<FPLDatabase>('/bootstrap-static/');
+    return data;
+  } catch (error) {
+    console.error('Error fetching FPL data:', error);
+    throw error;
+  }
+}
+
+export async function fetchGameWeekData(gameweek: number) {
+  try {
+    const data = await fplApi.get<GameWeekData>(`/event/${gameweek}/live/`);
+    return data;
+  } catch (error) {
+    console.error(`Error fetching Game Week ${gameweek} data:`, error);
+    throw error;
+  }
+}
+
+export async function updateInHouseScoreDatabase() {
+  const data = await fetchFPLData();
+  const events = data.events;
+  const players = data.elements;
+
+  for (const event of events) {
+    const gameWeekData = await fetchGameWeekData(event.id);
+    for (const element of gameWeekData.elements) {
+      const player = players.find((p) => p.id === element.id);
+      if (player) {
+        const isDuplicate = await PlayerScore.findOne({
+          playerId: player.id,
+          event: event.id,
+        });
+        if (isDuplicate) continue;
+
+        await PlayerScore.create({
+          playerId: player.id,
+          score: element.stats.total_points,
+          event: event.id,
+          isGoodPerformance: element.stats.total_points >= goodPerformanceThreshold,
+        });
+      }
+    }
+  }
+}
+
+export async function updateInHousePlayerDatabase() {
+  const data = await fetchFPLData();
+  const players = data.elements;
+
+  for (const player of players) {
+    const isDuplicate = await Player.findOne({
+      playerId: player.id,
+    });
+    if (isDuplicate) continue;
+
+    await Player.create({
+      playerId: player.id,
+      firstName: player.first_name,
+      lastName: player.second_name,
+      position: player.element_type,
+    });
+
+    // processedCount++;
+  }
+}
+
+export async function calculateAverageGoodPerformance() {
+  const players = await Player.find();
+  for (const player of players) {
+    const performances = await PlayerScore.find({
+      playerId: player.playerId,
+    });
+    if (performances.length === 0) continue;
+
+    const goodPerformances = performances.filter((p) => p.isGoodPerformance);
+    const average = Math.round((goodPerformances.length / performances.length) * 100 * 100) / 100;
+    const totalScore = performances.reduce((sum, p) => sum + p.score, 0);
+
+    player.totalScore = totalScore;
+    player.averageGoodPerformance = average;
+    await player.save();
+  }
+}
+
+export async function runDataUpdatePipeline() {
+  await updateInHousePlayerDatabase();
+  await updateInHouseScoreDatabase();
+  await calculateAverageGoodPerformance();
+}
+
+export async function getBestPlayersByPosition(position: number, count: number) {
+  const players = await Player.find({ position })
+    .sort({ averageGoodPerformance: -1, totalScore: -1 })
+    .limit(count);
+  return players;
+}
+
+export async function buildUltimateTeam() {
+  const position = {
+    GK: 1,
+    DEF: 2,
+    MID: 3,
+    FWD: 4,
+  };
+  const formation = {
+    GK: 2,
+    DEF: 5,
+    MID: 5,
+    FWD: 3,
+  };
+  // const formation = {
+  //   GK: 1,
+  //   DEF: 3,
+  //   MID: 5,
+  //   FWD: 2,
+  // };
+
+  const ultimateTeam = {
+    goalkeepers: await getBestPlayersByPosition(position.GK, formation.GK),
+    defenders: await getBestPlayersByPosition(position.DEF, formation.DEF),
+    midfielders: await getBestPlayersByPosition(position.MID, formation.MID),
+    forwards: await getBestPlayersByPosition(position.FWD, formation.FWD),
+  };
+
+  return ultimateTeam;
+}

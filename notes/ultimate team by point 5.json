@@ -1,0 +1,160 @@
+{
+  "goalkeepers": [
+    {
+      "_id": "68ffde3faa71927da3dd229d",
+      "firstName": "David",
+      "lastName": "Raya Martín",
+      "playerId": "1",
+      "position": 1,
+      "averageGoodPerformance": 0.6666666666666666,
+      "__v": 0,
+      "totalScore": 46
+    },
+    {
+      "_id": "68ffde41aa71927da3dd29bd",
+      "firstName": "Nick",
+      "lastName": "Pope",
+      "playerId": "469",
+      "position": 1,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 46
+    }
+  ],
+  "defenders": [
+    {
+      "_id": "68ffde3faa71927da3dd22a9",
+      "firstName": "Gabriel",
+      "lastName": "dos Santos Magalhães",
+      "playerId": "5",
+      "position": 2,
+      "averageGoodPerformance": 0.7777777777777778,
+      "__v": 0,
+      "totalScore": 68
+    },
+    {
+      "_id": "68ffde40aa71927da3dd25dc",
+      "firstName": "Daniel",
+      "lastName": "Muñoz Mejía",
+      "playerId": "256",
+      "position": 2,
+      "averageGoodPerformance": 0.6666666666666666,
+      "__v": 0,
+      "totalScore": 48
+    },
+    {
+      "_id": "68ffde3faa71927da3dd22af",
+      "firstName": "Riccardo",
+      "lastName": "Calafiori",
+      "playerId": "7",
+      "position": 2,
+      "averageGoodPerformance": 0.6666666666666666,
+      "__v": 0,
+      "totalScore": 54
+    },
+    {
+      "_id": "68ffde3faa71927da3dd2411",
+      "firstName": "Marcos",
+      "lastName": "Senesi Barón",
+      "playerId": "72",
+      "position": 2,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 53
+    },
+    {
+      "_id": "68ffde3faa71927da3dd2315",
+      "firstName": "Lucas",
+      "lastName": "Digne",
+      "playerId": "37",
+      "position": 2,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 32
+    }
+  ],
+  "midfielders": [
+    {
+      "_id": "68ffde3faa71927da3dd242f",
+      "firstName": "Antoine",
+      "lastName": "Semenyo",
+      "playerId": "82",
+      "position": 3,
+      "averageGoodPerformance": 0.6666666666666666,
+      "__v": 0,
+      "totalScore": 73
+    },
+    {
+      "_id": "68ffde40aa71927da3dd2669",
+      "firstName": "Iliman",
+      "lastName": "Ndiaye",
+      "playerId": "299",
+      "position": 3,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 43
+    },
+    {
+      "_id": "68ffde40aa71927da3dd27d8",
+      "firstName": "Mohamed",
+      "lastName": "Salah",
+      "playerId": "381",
+      "position": 3,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 42
+    },
+    {
+      "_id": "68ffde3faa71927da3dd22d6",
+      "firstName": "Declan",
+      "lastName": "Rice",
+      "playerId": "21",
+      "position": 3,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 50
+    },
+    {
+      "_id": "68ffde40aa71927da3dd25a9",
+      "firstName": "Moisés",
+      "lastName": "Caicedo Corozo",
+      "playerId": "241",
+      "position": 3,
+      "averageGoodPerformance": 0.4444444444444444,
+      "__v": 0,
+      "totalScore": 48
+    }
+  ],
+  "forwards": [
+    {
+      "_id": "68ffde40aa71927da3dd28d7",
+      "firstName": "Erling",
+      "lastName": "Haaland",
+      "playerId": "430",
+      "position": 4,
+      "averageGoodPerformance": 0.7777777777777778,
+      "__v": 0,
+      "totalScore": 85
+    },
+    {
+      "_id": "68ffde41aa71927da3dd2a60",
+      "firstName": "Nick",
+      "lastName": "Woltemade",
+      "playerId": "714",
+      "position": 4,
+      "averageGoodPerformance": 0.6666666666666666,
+      "__v": 0,
+      "totalScore": 34
+    },
+    {
+      "_id": "68ffde3faa71927da3dd24e0",
+      "firstName": "Igor Thiago",
+      "lastName": "Nascimento Rodrigues",
+      "playerId": "136",
+      "position": 4,
+      "averageGoodPerformance": 0.5555555555555556,
+      "__v": 0,
+      "totalScore": 45
+    }
+  ]
+}
