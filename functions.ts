@@ -22,12 +22,6 @@ export async function pingSelf(url: string) {
 }
 
 export async function fetchFPLData() {
-  const dbPath = path.join(__dirname, 'db.json');
-  if (fs.existsSync(dbPath)) {
-    const fileData = fs.readFileSync(dbPath, 'utf8');
-    return JSON.parse(fileData) as FPLDatabase;
-  }
-
   try {
     const data = await fplApi.get<FPLDatabase>('/bootstrap-static/');
     return data;
