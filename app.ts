@@ -39,7 +39,7 @@ setupSwagger(app, BASE_URL);
  *         description: Bad request.
  */
 app.get('/update-database', async (req: Request, res: Response) => {
-  runDataUpdatePipeline();
+  await runDataUpdatePipeline();
   return res.status(200).send({
     message: 'In-house database updated successfully',
   });

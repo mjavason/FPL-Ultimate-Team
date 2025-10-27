@@ -46,18 +46,15 @@ export async function updateInHouseScoreDatabase() {
   const events = data.events;
   const players = data.elements;
 
+  await PlayerScore.deleteMany({});
+
   for (const event of events) {
+    const playerScoreArray = [];
     const gameWeekData = await fetchGameWeekData(event.id);
     for (const element of gameWeekData.elements) {
       const player = players.find((p) => p.id === element.id);
       if (player) {
-        const isDuplicate = await PlayerScore.findOne({
-          playerId: player.id,
-          event: event.id,
-        });
-        if (isDuplicate) continue;
-
-        await PlayerScore.create({
+        playerScoreArray.push({
           playerId: player.id,
           score: element.stats.total_points,
           event: event.id,
@@ -65,6 +62,8 @@ export async function updateInHouseScoreDatabase() {
         });
       }
     }
+
+    await PlayerScore.insertMany(playerScoreArray);
   }
 }
 
@@ -72,38 +71,76 @@ export async function updateInHousePlayerDatabase() {
   const data = await fetchFPLData();
   const players = data.elements;
 
-  for (const player of players) {
-    const isDuplicate = await Player.findOne({
-      playerId: player.id,
-    });
-    if (isDuplicate) continue;
+  await Player.deleteMany({});
 
-    await Player.create({
+  const playersArray = [];
+  for (const player of players) {
+    playersArray.push({
       playerId: player.id,
       firstName: player.first_name,
       lastName: player.second_name,
       position: player.element_type,
     });
-
-    // processedCount++;
   }
+  await Player.insertMany(playersArray);
 }
 
-export async function calculateAverageGoodPerformance() {
-  const players = await Player.find();
-  for (const player of players) {
-    const performances = await PlayerScore.find({
-      playerId: player.playerId,
-    });
-    if (performances.length === 0) continue;
+// export async function calculateAverageGoodPerformance() {
+//   const players = await Player.find();
+//   for (const player of players) {
+//     const performances = await PlayerScore.find({
+//       playerId: player.playerId,
+//     });
+//     if (performances.length === 0) continue;
 
-    const goodPerformances = performances.filter((p) => p.isGoodPerformance);
-    const average = Math.round((goodPerformances.length / performances.length) * 100 * 100) / 100;
-    const totalScore = performances.reduce((sum, p) => sum + p.score, 0);
+//     const goodPerformances = performances.filter((p) => p.isGoodPerformance);
+//     const average = Math.round((goodPerformances.length / performances.length) * 100 * 100) / 100;
+//     const totalScore = performances.reduce((sum, p) => sum + p.score, 0);
 
-    player.totalScore = totalScore;
-    player.averageGoodPerformance = average;
-    await player.save();
+//     player.totalScore = totalScore;
+//     player.averageGoodPerformance = average;
+//     await player.save();
+//   }
+// }
+
+export async function calculateAverageGoodPerformance(): Promise<void> {
+  const results = await PlayerScore.aggregate([
+    {
+      $group: {
+        _id: '$playerId',
+        totalScore: { $sum: '$score' },
+        totalCount: { $sum: 1 },
+        goodCount: {
+          $sum: { $cond: [{ $eq: ['$isGoodPerformance', true] }, 1, 0] },
+        },
+      },
+    },
+    {
+      $project: {
+        playerId: '$_id',
+        _id: 0,
+        totalScore: 1,
+        averageGoodPerformance: {
+          $round: [{ $multiply: [{ $divide: ['$goodCount', '$totalCount'] }, 100] }, 2],
+        },
+      },
+    },
+  ]);
+
+  const bulkOps = results.map((r) => ({
+    updateOne: {
+      filter: { playerId: r.playerId },
+      update: {
+        $set: {
+          totalScore: r.totalScore,
+          averageGoodPerformance: r.averageGoodPerformance,
+        },
+      },
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await Player.bulkWrite(bulkOps);
   }
 }
 
