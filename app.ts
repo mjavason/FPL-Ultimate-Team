@@ -4,11 +4,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import 'express-async-errors';
 import morgan from 'morgan';
 import { BASE_URL, PORT } from './constants';
-import {
-  buildUltimateTeam,
-  calculateAverageGoodPerformance,
-  runDataUpdatePipeline,
-} from './functions';
+import { buildUltimateTeam, runDataUpdatePipeline } from './functions';
 import { connectDB } from './src/database';
 import { setupSwagger } from './swagger.config';
 
@@ -43,7 +39,7 @@ setupSwagger(app, BASE_URL);
  *         description: Bad request.
  */
 app.get('/update-database', async (req: Request, res: Response) => {
-  await runDataUpdatePipeline();
+  runDataUpdatePipeline();
   return res.status(200).send({
     message: 'In-house database updated successfully',
   });
