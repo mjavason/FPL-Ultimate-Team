@@ -27,7 +27,7 @@ setupSwagger(app, BASE_URL);
 
 /**
  * @swagger
- * /update-database:
+ * /sync:
  *   get:
  *     summary: Update the in-house database with FPL data
  *     description: Fetches data from the FPL API and updates the in-house database. Run this endpoint to refresh the data.
@@ -38,7 +38,7 @@ setupSwagger(app, BASE_URL);
  *       '400':
  *         description: Bad request.
  */
-app.get('/update-database', async (req: Request, res: Response) => {
+app.get('/sync', async (req: Request, res: Response) => {
   await runDataUpdatePipeline();
   return res.status(200).send({
     message: 'In-house database updated successfully',

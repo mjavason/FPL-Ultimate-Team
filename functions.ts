@@ -164,11 +164,17 @@ export async function buildUltimateTeam() {
     MID: 3,
     FWD: 4,
   };
-  const formation = {
-    GK: 2,
-    DEF: 5,
-    MID: 5,
-    FWD: 3,
+  // const formation = {
+  //   GK: 2,
+  //   DEF: 5,
+  //   MID: 5,
+  //   FWD: 3,
+  // };
+    const formation = {
+    GK: 10,
+    DEF: 10,
+    MID: 10,
+    FWD: 10,
   };
   // const formation = {
   //   GK: 1,
