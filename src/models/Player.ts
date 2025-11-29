@@ -5,8 +5,10 @@ interface IPlayer {
   lastName: string;
   playerId: string;
   averageGoodPerformance: number;
+  averageGoodPerformancePastFive: number;
   totalScore: number;
   position: number;
+  team: string;
 }
 
 const PlayerSchema = new mongoose.Schema<IPlayer>({
@@ -30,9 +32,17 @@ const PlayerSchema = new mongoose.Schema<IPlayer>({
     type: Number,
     default: 0,
   },
+  averageGoodPerformancePastFive: {
+    type: Number,
+    default: 0,
+  },
   totalScore: {
     type: Number,
     default: 0,
+  },
+  team: {
+    type: String,
+    required: true,
   },
 });
 

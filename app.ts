@@ -4,7 +4,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import 'express-async-errors';
 import morgan from 'morgan';
 import { BASE_URL, PORT } from './constants';
-import { buildUltimateTeam, runDataUpdatePipeline } from './functions';
+import { buildUltimateTeam, buildUltimateTeamPastFive, runDataUpdatePipeline } from './functions';
 import { connectDB } from './src/database';
 import { setupSwagger } from './swagger.config';
 
@@ -60,6 +60,24 @@ app.get('/sync', async (req: Request, res: Response) => {
  */
 app.get('/ultimate-team', async (req: Request, res: Response) => {
   const ultimateTeam = await buildUltimateTeam();
+  return res.status(200).send(ultimateTeam);
+});
+
+/**
+ * @swagger
+ * /ultimate-team-past-five:
+ *   get:
+ *     summary: Get the ultimate team sorted by overall performance in the past 5 game weeks
+ *     description: Returns a list of players sorted by their overall performance in the past 5 game weeks. 5 defenders, 5 midfielders, 3 forwards, and 2 goalkeepers.
+ *     tags: [FPL]
+ *     responses:
+ *       '200':
+ *         description: Successful.
+ *       '400':
+ *         description: Bad request.
+ */
+app.get('/ultimate-team-past-five', async (req: Request, res: Response) => {
+  const ultimateTeam = await buildUltimateTeamPastFive();
   return res.status(200).send(ultimateTeam);
 });
 

@@ -31,6 +31,11 @@ export async function fetchFPLData() {
   }
 }
 
+export function findTeamNameById(teamId: number, teams: FPLDatabase['teams']): string {
+  const team = teams.find((t) => t.id === teamId);
+  return team ? team.name : 'Unknown Team';
+}
+
 export async function fetchGameWeekData(gameweek: number) {
   try {
     const data = await fplApi.get<GameWeekData>(`/event/${gameweek}/live/`);
@@ -80,6 +85,7 @@ export async function updateInHousePlayerDatabase() {
       firstName: player.first_name,
       lastName: player.second_name,
       position: player.element_type,
+      team: findTeamNameById(player.team, data.teams),
     });
   }
   await Player.insertMany(playersArray);
@@ -144,15 +150,93 @@ export async function calculateAverageGoodPerformance(): Promise<void> {
   }
 }
 
+export async function calculateAverageGoodPerformancePastFive(): Promise<void> {
+  const results = await PlayerScore.aggregate([
+    {
+      $sort: {
+        _id: -1,
+      },
+    },
+    {
+      $group: {
+        _id: '$playerId',
+        entries: {
+          $push: {
+            score: '$score',
+            isGoodPerformance: '$isGoodPerformance',
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        playerId: '$_id',
+        entries: { $slice: ['$entries', 5] },
+      },
+    },
+    {
+      $project: {
+        playerId: 1,
+        averageGoodPerformancePastFive: {
+          $round: [
+            {
+              $multiply: [
+                {
+                  $divide: [
+                    {
+                      $size: {
+                        $filter: {
+                          input: '$entries',
+                          cond: { $eq: ['$$this.isGoodPerformance', true] },
+                        },
+                      },
+                    },
+                    { $size: '$entries' },
+                  ],
+                },
+                100,
+              ],
+            },
+            2,
+          ],
+        },
+      },
+    },
+  ]);
+
+  const bulkOps = results.map((r) => ({
+    updateOne: {
+      filter: { playerId: r.playerId },
+      update: {
+        $set: {
+          averageGoodPerformancePastFive: r.averageGoodPerformancePastFive,
+        },
+      },
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await Player.bulkWrite(bulkOps);
+  }
+}
+
 export async function runDataUpdatePipeline() {
   await updateInHousePlayerDatabase();
   await updateInHouseScoreDatabase();
   await calculateAverageGoodPerformance();
+  await calculateAverageGoodPerformancePastFive();
 }
 
 export async function getBestPlayersByPosition(position: number, count: number) {
   const players = await Player.find({ position })
     .sort({ averageGoodPerformance: -1, totalScore: -1 })
+    .limit(count);
+  return players;
+}
+
+export async function getBestPlayersByPositionPastFive(position: number, count: number) {
+  const players = await Player.find({ position })
+    .sort({ averageGoodPerformancePastFive: -1, totalScore: -1 })
     .limit(count);
   return players;
 }
@@ -164,18 +248,13 @@ export async function buildUltimateTeam() {
     MID: 3,
     FWD: 4,
   };
-  // const formation = {
-  //   GK: 2,
-  //   DEF: 5,
-  //   MID: 5,
-  //   FWD: 3,
-  // };
-    const formation = {
-    GK: 10,
-    DEF: 10,
-    MID: 10,
-    FWD: 10,
+  const formation = {
+    GK: 2,
+    DEF: 5,
+    MID: 5,
+    FWD: 3,
   };
+
   // const formation = {
   //   GK: 1,
   //   DEF: 3,
@@ -188,6 +267,37 @@ export async function buildUltimateTeam() {
     defenders: await getBestPlayersByPosition(position.DEF, formation.DEF),
     midfielders: await getBestPlayersByPosition(position.MID, formation.MID),
     forwards: await getBestPlayersByPosition(position.FWD, formation.FWD),
+  };
+
+  return ultimateTeam;
+}
+
+export async function buildUltimateTeamPastFive() {
+  const position = {
+    GK: 1,
+    DEF: 2,
+    MID: 3,
+    FWD: 4,
+  };
+  const formation = {
+    GK: 2,
+    DEF: 5,
+    MID: 5,
+    FWD: 3,
+  };
+
+  // const formation = {
+  //   GK: 1,
+  //   DEF: 3,
+  //   MID: 5,
+  //   FWD: 2,
+  // };
+
+  const ultimateTeam = {
+    goalkeepers: await getBestPlayersByPositionPastFive(position.GK, formation.GK),
+    defenders: await getBestPlayersByPositionPastFive(position.DEF, formation.DEF),
+    midfielders: await getBestPlayersByPositionPastFive(position.MID, formation.MID),
+    forwards: await getBestPlayersByPositionPastFive(position.FWD, formation.FWD),
   };
 
   return ultimateTeam;
