@@ -5,6 +5,8 @@ interface IPlayerScore {
   score: number;
   event: number;
   isGoodPerformance: boolean;
+
+  gameWeek: number;
 }
 
 const PlayerScoreSchema = new mongoose.Schema<IPlayerScore>({
@@ -17,6 +19,10 @@ const PlayerScoreSchema = new mongoose.Schema<IPlayerScore>({
     required: true,
   },
   event: {
+    type: Number,
+    required: true,
+  },
+  gameWeek: {
     type: Number,
     required: true,
   },

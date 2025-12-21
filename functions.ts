@@ -64,6 +64,7 @@ export async function updateInHouseScoreDatabase() {
           score: element.stats.total_points,
           event: event.id,
           isGoodPerformance: element.stats.total_points >= goodPerformanceThreshold,
+          gameWeek: event.id,
         });
       }
     }
@@ -154,7 +155,7 @@ export async function calculateAverageGoodPerformancePastFive(): Promise<void> {
   const results = await PlayerScore.aggregate([
     {
       $sort: {
-        _id: -1,
+        gameWeek: -1,
       },
     },
     {
