@@ -2,6 +2,7 @@ import axios from 'axios';
 import { fplApi } from './constants';
 import Player from './src/models/Player';
 import PlayerScore from './src/models/PlayerScore';
+import { transformPlayer } from './src/transform-player.transformer';
 import { FPLDatabase } from './types/db.type';
 import { GameWeekData } from './types/gameweek.type';
 const fs = require('fs');
@@ -231,14 +232,16 @@ export async function runDataUpdatePipeline() {
 export async function getBestPlayersByPosition(position: number, count: number) {
   const players = await Player.find({ position })
     .sort({ averageGoodPerformance: -1, totalScore: -1 })
-    .limit(count);
+    .limit(count)
+    .lean();
   return players;
 }
 
 export async function getBestPlayersByPositionPastFive(position: number, count: number) {
   const players = await Player.find({ position })
     .sort({ averageGoodPerformancePastFive: -1, totalScore: -1 })
-    .limit(count);
+    .limit(count)
+    .lean();
   return players;
 }
 
@@ -263,14 +266,17 @@ export async function buildUltimateTeam() {
   //   FWD: 2,
   // };
 
-  const ultimateTeam = {
-    goalkeepers: await getBestPlayersByPosition(position.GK, formation.GK),
-    defenders: await getBestPlayersByPosition(position.DEF, formation.DEF),
-    midfielders: await getBestPlayersByPosition(position.MID, formation.MID),
-    forwards: await getBestPlayersByPosition(position.FWD, formation.FWD),
-  };
+  const goalkeepers = await getBestPlayersByPosition(position.GK, formation.GK);
+  const defenders = await getBestPlayersByPosition(position.DEF, formation.DEF);
+  const midfielders = await getBestPlayersByPosition(position.MID, formation.MID);
+  const forwards = await getBestPlayersByPosition(position.FWD, formation.FWD);
 
-  return ultimateTeam;
+  return {
+    goalKeepers: goalkeepers.map(transformPlayer),
+    defenders: defenders.map(transformPlayer),
+    midfielders: midfielders.map(transformPlayer),
+    forwards: forwards.map(transformPlayer),
+  };
 }
 
 export async function buildUltimateTeamPastFive() {
@@ -294,12 +300,24 @@ export async function buildUltimateTeamPastFive() {
   //   FWD: 2,
   // };
 
-  const ultimateTeam = {
-    goalkeepers: await getBestPlayersByPositionPastFive(position.GK, formation.GK),
-    defenders: await getBestPlayersByPositionPastFive(position.DEF, formation.DEF),
-    midfielders: await getBestPlayersByPositionPastFive(position.MID, formation.MID),
-    forwards: await getBestPlayersByPositionPastFive(position.FWD, formation.FWD),
-  };
+  const goalkeepers = await getBestPlayersByPositionPastFive(position.GK, formation.GK);
+  const defenders = await getBestPlayersByPositionPastFive(position.DEF, formation.DEF);
+  const midfielders = await getBestPlayersByPositionPastFive(position.MID, formation.MID);
+  const forwards = await getBestPlayersByPositionPastFive(position.FWD, formation.FWD);
 
-  return ultimateTeam;
+  return {
+    goalkeepers: goalkeepers.map(transformPlayer),
+    defenders: defenders.map(transformPlayer),
+    midfielders: midfielders.map(transformPlayer),
+    forwards: forwards.map(transformPlayer),
+  };
+}
+
+export async function teamBestFive(teamName: string) {
+  const players = await Player.find({ team: RegExp(teamName, 'i') })
+    .sort({ averageGoodPerformance: -1, totalScore: -1 })
+    .limit(5)
+    .lean();
+
+  return players.map(transformPlayer);
 }

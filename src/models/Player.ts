@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-interface IPlayer {
+export interface IPlayer {
   firstName: string;
   lastName: string;
   playerId: string;

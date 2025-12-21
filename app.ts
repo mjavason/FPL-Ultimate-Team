@@ -4,7 +4,12 @@ import express, { NextFunction, Request, Response } from 'express';
 import 'express-async-errors';
 import morgan from 'morgan';
 import { BASE_URL, PORT } from './constants';
-import { buildUltimateTeam, buildUltimateTeamPastFive, runDataUpdatePipeline } from './functions';
+import {
+  buildUltimateTeam,
+  buildUltimateTeamPastFive,
+  runDataUpdatePipeline,
+  teamBestFive,
+} from './functions';
 import { connectDB } from './src/database';
 import { setupSwagger } from './swagger.config';
 
@@ -79,6 +84,38 @@ app.get('/ultimate-team', async (req: Request, res: Response) => {
 app.get('/ultimate-team-past-five', async (req: Request, res: Response) => {
   const ultimateTeam = await buildUltimateTeamPastFive();
   return res.status(200).send(ultimateTeam);
+});
+
+/**
+ * @swagger
+ * /team-best-five:
+ *   get:
+ *     summary: Get the five best players in a team sorted by overall performance
+ *     description: Returns a list of players sorted by their overall performance. Top 5 players from a specified team.
+ *     tags: [FPL]
+ *     parameters:
+ *       - in: query
+ *         name: teamName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The name of the team to get the best five players from.
+ *     responses:
+ *       '200':
+ *         description: Successful.
+ *       '400':
+ *         description: Bad request.
+ */
+app.get('/team-best-five', async (req: Request, res: Response) => {
+  const teamName = req.query.teamName as string;
+  if (!teamName) {
+    return res.status(400).send({
+      error: 'teamName query parameter is required',
+    });
+  }
+
+  const data = await teamBestFive(teamName);
+  return res.status(200).send(data);
 });
 
 //#endregion
