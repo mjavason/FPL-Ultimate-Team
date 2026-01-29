@@ -8,6 +8,7 @@ import { registerCronJobs } from './cron';
 import {
   buildUltimateTeam,
   buildUltimateTeamPastFive,
+  pingSelf,
   runDataUpdatePipeline,
   teamBestFive,
 } from './functions';
@@ -208,6 +209,6 @@ app.listen(PORT, async () => {
 });
 
 // (for render services) Keep the API awake by pinging it periodically
-// setInterval(pingSelf(BASE_URL), 600000);
+setInterval(() => pingSelf(BASE_URL), 600000);
 
 //#endregion
