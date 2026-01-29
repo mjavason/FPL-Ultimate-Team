@@ -4,6 +4,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import 'express-async-errors';
 import morgan from 'morgan';
 import { BASE_URL, PORT } from './constants';
+import { registerCronJobs } from './cron';
 import {
   buildUltimateTeam,
   buildUltimateTeamPastFive,
@@ -202,6 +203,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 app.listen(PORT, async () => {
   await connectDB();
+  registerCronJobs();
   console.log(`Server running on port ${PORT}`);
 });
 
