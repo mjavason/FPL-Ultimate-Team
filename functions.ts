@@ -106,6 +106,7 @@ export async function updateInHousePlayerDatabase() {
       lastName: player.second_name,
       position: player.element_type,
       team: findTeamNameById(player.team, data.teams),
+      currentPrice: player.now_cost,
     });
   }
   await Player.insertMany(playersArray);
@@ -472,12 +473,27 @@ export async function teamBestFive(teamName: string) {
   return players.map(transformPlayer);
 }
 
+export async function getFiveCheapestBestPlayers() {
+  return await Player.find({
+    currentPrice: { $gt: 0 },
+    averageMinutesPerGame: { $gt: 0 },
+  })
+    .sort({
+      currentPrice: 1,
+      averageMinutesPerGame: -1,
+      averageGoodPerformance: -1,
+      totalScore: -1,
+    })
+    .limit(10)
+    .lean();
+}
+
 export async function test() {
-  const data = await fetchFPLData();
-  const gameWeekData = getGameWeekCount(data);
+  const data = await getFiveCheapestBestPlayers();
+  console.log(data);
 
   return {
-    data: gameWeekData,
+    data,
     message: 'Test Successful',
   };
 }

@@ -10,6 +10,7 @@ export interface IPlayer {
   totalScore: number;
   position: number;
   team: string;
+  currentPrice: number;
 }
 
 const PlayerSchema = new mongoose.Schema<IPlayer>({
@@ -48,6 +49,10 @@ const PlayerSchema = new mongoose.Schema<IPlayer>({
   team: {
     type: String,
     required: true,
+  },
+  currentPrice: {
+    type: Number,
+    default: 0,
   },
 });
 

@@ -8,10 +8,10 @@ import { registerCronJobs } from './cron';
 import {
   buildUltimateTeam,
   buildUltimateTeamPastFive,
+  getFiveCheapestBestPlayers,
   pingSelf,
   runDataUpdatePipeline,
   teamBestFive,
-  test,
 } from './functions';
 import { connectDB } from './src/database';
 import { setupSwagger } from './swagger.config';
@@ -119,6 +119,30 @@ app.get('/team-best-five', async (req: Request, res: Response) => {
 
   const data = await teamBestFive(teamName);
   return res.status(200).send(data);
+});
+
+/**
+ * @swagger
+ * /cheap-best-five:
+ *   get:
+ *     summary: Get the five cheapest value players
+ *     description: Returns the five players with the highest average game time per unit of price, using the in-house database.
+ *     tags: [FPL]
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved the five best-value players.
+ *       '500':
+ *         description: Internal server error.
+ */
+app.get('/cheap-best-five', async (_req: Request, res: Response) => {
+  try {
+    const data = await getFiveCheapestBestPlayers();
+    return res.status(200).send(data);
+  } catch (error) {
+    return res.status(500).send({
+      error: 'Failed to retrieve best-value players',
+    });
+  }
 });
 
 //#endregion
