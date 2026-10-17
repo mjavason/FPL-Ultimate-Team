@@ -60,75 +60,56 @@ export async function fetchGameWeekData(gameweek: number) {
 export async function updateInHouseScoreDatabase() {
   const data = await fetchFPLData();
   const players = data.elements;
-  const gameWeekCount = getGameWeekCount(data);
+  const { finished } = getGameWeekCount(data);
+
+  const gameWeeks = await Promise.all(
+    Array.from({ length: finished }, (_, index) => fetchGameWeekData(index + 1)),
+  );
+
+  const playerScores = gameWeeks.flatMap((gameWeekData, index) => {
+    const gameWeek = index + 1;
+
+    const elementsById = new Map(gameWeekData.elements.map((element) => [element.id, element]));
+
+    return players.map((player) => {
+      const element = elementsById.get(player.id);
+      const score = element?.stats.total_points ?? 0;
+
+      return {
+        playerId: player.id,
+        score,
+        isGoodPerformance: score >= goodPerformanceThreshold,
+        gameWeek,
+        minutes: element?.stats.minutes ?? 0,
+      };
+    });
+  });
 
   await PlayerScore.deleteMany({});
 
-  for (let i = 1; i <= gameWeekCount.finished; i++) {
-    const playerScoreArray = [];
-    const gameWeekData = await fetchGameWeekData(i);
-    for (const player of players) {
-      const element = gameWeekData.elements.find((e) => e.id === player.id);
-      if (element) {
-        playerScoreArray.push({
-          playerId: player.id,
-          score: element.stats.total_points,
-          isGoodPerformance: element.stats.total_points >= goodPerformanceThreshold,
-          gameWeek: i,
-          minutes: element.stats.minutes,
-        });
-      } else {
-        playerScoreArray.push({
-          playerId: player.id,
-          score: 0,
-          isGoodPerformance: false,
-          gameWeek: i,
-          minutes: 0,
-        });
-      }
-    }
-
-    await PlayerScore.insertMany(playerScoreArray);
+  if (playerScores.length > 0) {
+    await PlayerScore.insertMany(playerScores, { ordered: false });
   }
 }
 
 export async function updateInHousePlayerDatabase() {
   const data = await fetchFPLData();
-  const players = data.elements;
+
+  const playersArray = data.elements.map((player) => ({
+    playerId: player.id,
+    firstName: player.first_name,
+    lastName: player.second_name,
+    position: player.element_type,
+    team: findTeamNameById(player.team, data.teams),
+    currentPrice: player.now_cost,
+  }));
 
   await Player.deleteMany({});
 
-  const playersArray = [];
-  for (const player of players) {
-    playersArray.push({
-      playerId: player.id,
-      firstName: player.first_name,
-      lastName: player.second_name,
-      position: player.element_type,
-      team: findTeamNameById(player.team, data.teams),
-      currentPrice: player.now_cost,
-    });
+  if (playersArray.length > 0) {
+    await Player.insertMany(playersArray, { ordered: false });
   }
-  await Player.insertMany(playersArray);
 }
-
-// export async function calculateAverageGoodPerformance() {
-//   const players = await Player.find();
-//   for (const player of players) {
-//     const performances = await PlayerScore.find({
-//       playerId: player.playerId,
-//     });
-//     if (performances.length === 0) continue;
-
-//     const goodPerformances = performances.filter((p) => p.isGoodPerformance);
-//     const average = Math.round((goodPerformances.length / performances.length) * 100 * 100) / 100;
-//     const totalScore = performances.reduce((sum, p) => sum + p.score, 0);
-
-//     player.totalScore = totalScore;
-//     player.averageGoodPerformance = average;
-//     await player.save();
-//   }
-// }
 
 // Unreadable - checkout the 3 functions below.
 export async function calculatePlayerPerformanceStats(): Promise<void> {
