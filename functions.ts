@@ -32,6 +32,16 @@ export async function fetchFPLData() {
   }
 }
 
+export function getGameWeekCount(db: FPLDatabase) {
+  const currentEvent = db.events.find((event) => event.is_current);
+
+  return {
+    current: currentEvent?.id ?? null,
+    total: db.events.length,
+    finished: db.events.filter((event) => event.finished).length,
+  };
+}
+
 export function findTeamNameById(teamId: number, teams: FPLDatabase['teams']): string {
   const team = teams.find((t) => t.id === teamId);
   return team ? team.name : 'Unknown Team';
@@ -49,23 +59,31 @@ export async function fetchGameWeekData(gameweek: number) {
 
 export async function updateInHouseScoreDatabase() {
   const data = await fetchFPLData();
-  const events = data.events;
   const players = data.elements;
+  const gameWeekCount = getGameWeekCount(data);
 
   await PlayerScore.deleteMany({});
 
-  for (const event of events) {
+  for (let i = 1; i <= gameWeekCount.finished; i++) {
     const playerScoreArray = [];
-    const gameWeekData = await fetchGameWeekData(event.id);
-    for (const element of gameWeekData.elements) {
-      const player = players.find((p) => p.id === element.id);
-      if (player) {
+    const gameWeekData = await fetchGameWeekData(i);
+    for (const player of players) {
+      const element = gameWeekData.elements.find((e) => e.id === player.id);
+      if (element) {
         playerScoreArray.push({
           playerId: player.id,
           score: element.stats.total_points,
-          event: event.id,
           isGoodPerformance: element.stats.total_points >= goodPerformanceThreshold,
-          gameWeek: event.id,
+          gameWeek: i,
+          minutes: element.stats.minutes,
+        });
+      } else {
+        playerScoreArray.push({
+          playerId: player.id,
+          score: 0,
+          isGoodPerformance: false,
+          gameWeek: i,
+          minutes: 0,
         });
       }
     }
@@ -111,6 +129,102 @@ export async function updateInHousePlayerDatabase() {
 //   }
 // }
 
+// Unreadable - checkout the 3 functions below.
+export async function calculatePlayerPerformanceStats(): Promise<void> {
+  const latestScore = await PlayerScore.findOne()
+    .sort({ gameWeek: -1 })
+    .select({ gameWeek: 1, _id: 0 })
+    .lean();
+
+  const finishedGameWeek = latestScore?.gameWeek ?? 0;
+
+  if (finishedGameWeek === 0) return;
+
+  const startGameWeek = Math.max(1, finishedGameWeek - 4);
+  const pastFiveDenominator = finishedGameWeek - startGameWeek + 1;
+
+  const results = await PlayerScore.aggregate([
+    {
+      $group: {
+        _id: '$playerId',
+        totalScore: { $sum: { $ifNull: ['$score', 0] } },
+        totalGames: { $sum: 1 },
+        totalMinutes: { $sum: { $ifNull: ['$minutes', 0] } },
+        goodCount: {
+          $sum: {
+            $cond: [{ $eq: ['$isGoodPerformance', true] }, 1, 0],
+          },
+        },
+        recentFiveGoodCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $gte: ['$gameWeek', startGameWeek] },
+                  { $lte: ['$gameWeek', finishedGameWeek] },
+                  { $eq: ['$isGoodPerformance', true] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        playerId: '$_id',
+        totalScore: 1,
+        averageGoodPerformance: {
+          $round: [
+            {
+              $multiply: [{ $divide: ['$goodCount', { $max: ['$totalGames', 1] }] }, 100],
+            },
+            2,
+          ],
+        },
+        averageMinutesPerGame: {
+          $round: [{ $divide: ['$totalMinutes', { $max: ['$totalGames', 1] }] }, 2],
+        },
+        averageGoodPerformancePastFive: {
+          $round: [
+            {
+              $multiply: [
+                {
+                  $divide: ['$recentFiveGoodCount', Math.max(pastFiveDenominator, 1)],
+                },
+                100,
+              ],
+            },
+            2,
+          ],
+        },
+      },
+    },
+  ]).exec();
+
+  if (results.length === 0) return;
+
+  await Player.bulkWrite(
+    results.map((result) => ({
+      updateOne: {
+        filter: { playerId: result.playerId },
+        update: {
+          $set: {
+            totalScore: result.totalScore,
+            averageGoodPerformance: result.averageGoodPerformance,
+            averageMinutesPerGame: result.averageMinutesPerGame,
+            averageGoodPerformancePastFive: result.averageGoodPerformancePastFive,
+          },
+        },
+      },
+    })),
+    { ordered: false },
+  );
+}
+
 export async function calculateAverageGoodPerformance(): Promise<void> {
   const results = await PlayerScore.aggregate([
     {
@@ -152,6 +266,43 @@ export async function calculateAverageGoodPerformance(): Promise<void> {
   }
 }
 
+export async function calculateAverageMinutesPerGame(): Promise<void> {
+  const results = await PlayerScore.aggregate([
+    {
+      $group: {
+        _id: '$playerId',
+        totalMinutes: { $sum: '$minutes' },
+        totalGames: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        playerId: '$_id',
+        averageMinutesPerGame: {
+          $round: [{ $divide: ['$totalMinutes', '$totalGames'] }, 2],
+        },
+      },
+    },
+  ]);
+
+  const bulkOps = results.map((result) => ({
+    updateOne: {
+      filter: { playerId: result.playerId },
+      update: {
+        $set: {
+          averageMinutesPerGame: result.averageMinutesPerGame,
+        },
+      },
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await Player.bulkWrite(bulkOps);
+  }
+}
+
+// TODO: Fix missed game bug
 export async function calculateAverageGoodPerformancePastFive(): Promise<void> {
   const results = await PlayerScore.aggregate([
     {
@@ -222,11 +373,10 @@ export async function calculateAverageGoodPerformancePastFive(): Promise<void> {
   }
 }
 
-export async function runDataUpdatePipeline() {
+export async function runDataUpdatePipeline(): Promise<void> {
   await updateInHousePlayerDatabase();
   await updateInHouseScoreDatabase();
-  await calculateAverageGoodPerformance();
-  await calculateAverageGoodPerformancePastFive();
+  await calculatePlayerPerformanceStats();
 }
 
 export async function getBestPlayersByPosition(position: number, count: number) {
@@ -320,4 +470,14 @@ export async function teamBestFive(teamName: string) {
     .lean();
 
   return players.map(transformPlayer);
+}
+
+export async function test() {
+  const data = await fetchFPLData();
+  const gameWeekData = getGameWeekCount(data);
+
+  return {
+    data: gameWeekData,
+    message: 'Test Successful',
+  };
 }

@@ -11,6 +11,7 @@ import {
   pingSelf,
   runDataUpdatePipeline,
   teamBestFive,
+  test,
 } from './functions';
 import { connectDB } from './src/database';
 import { setupSwagger } from './swagger.config';
@@ -165,7 +166,10 @@ app.get('/api', async (req: Request, res: Response) => {
  *       '400':
  *         description: Bad request.
  */
-app.get('/', (req: Request, res: Response) => {
+app.get('/', async (req: Request, res: Response) => {
+  // const data = await test();
+  // return res.send(data);
+
   return res.send({
     message: 'API is Live!',
   });

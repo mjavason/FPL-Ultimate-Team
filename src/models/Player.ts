@@ -6,6 +6,7 @@ export interface IPlayer {
   playerId: string;
   averageGoodPerformance: number;
   averageGoodPerformancePastFive: number;
+  averageMinutesPerGame: number;
   totalScore: number;
   position: number;
   team: string;
@@ -36,6 +37,10 @@ const PlayerSchema = new mongoose.Schema<IPlayer>({
     type: Number,
     default: 0,
   },
+  averageMinutesPerGame: {
+    type: Number,
+    default: 0,
+  },
   totalScore: {
     type: Number,
     default: 0,
@@ -45,6 +50,10 @@ const PlayerSchema = new mongoose.Schema<IPlayer>({
     required: true,
   },
 });
+
+// Supports player lookups and bulkWrite filters.
+// Also prevents duplicate player records.
+PlayerSchema.index({ playerId: 1 }, { unique: true });
 
 export const Player = mongoose.model<IPlayer>('Player', PlayerSchema);
 export default Player;
