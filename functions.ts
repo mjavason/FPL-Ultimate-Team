@@ -479,8 +479,8 @@ export async function getFiveCheapestBestPlayers() {
     averageMinutesPerGame: { $gt: 0 },
   })
     .sort({
-      currentPrice: 1,
       averageMinutesPerGame: -1,
+      currentPrice: 1,
       averageGoodPerformance: -1,
       totalScore: -1,
     })
