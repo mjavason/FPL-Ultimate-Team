@@ -473,10 +473,11 @@ export async function teamBestFive(teamName: string) {
   return players.map(transformPlayer);
 }
 
-export async function getFiveCheapestBestPlayers() {
+export async function getCheapestBestPlayersByPosition(position: number, count: number) {
   return await Player.find({
     currentPrice: { $gt: 0 },
     averageMinutesPerGame: { $gt: 0 },
+    position,
   })
     .sort({
       averageMinutesPerGame: -1,
@@ -484,12 +485,39 @@ export async function getFiveCheapestBestPlayers() {
       averageGoodPerformance: -1,
       totalScore: -1,
     })
-    .limit(10)
+    .limit(count)
     .lean();
 }
 
+export async function getUltimateCheapTeam() {
+  const position = {
+    GK: 1,
+    DEF: 2,
+    MID: 3,
+    FWD: 4,
+  };
+  const formation = {
+    GK: 2,
+    DEF: 5,
+    MID: 5,
+    FWD: 3,
+  };
+
+  const goalkeepers = await getCheapestBestPlayersByPosition(position.GK, formation.GK);
+  const defenders = await getCheapestBestPlayersByPosition(position.DEF, formation.DEF);
+  const midfielders = await getCheapestBestPlayersByPosition(position.MID, formation.MID);
+  const forwards = await getCheapestBestPlayersByPosition(position.FWD, formation.FWD);
+
+  return {
+    goalKeepers: goalkeepers.map(transformPlayer),
+    defenders: defenders.map(transformPlayer),
+    midfielders: midfielders.map(transformPlayer),
+    forwards: forwards.map(transformPlayer),
+  };
+}
+
 export async function test() {
-  const data = await getFiveCheapestBestPlayers();
+  const data = await getUltimateCheapTeam();
   console.log(data);
 
   return {
